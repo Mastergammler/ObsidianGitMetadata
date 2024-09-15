@@ -23,8 +23,20 @@ function parseLogEntry(logEntry: string, map: Map<string, GitFile>) {
 	const fileLines = lines.filter(l => /^\d/.test(l)).map(l => {
 		// info is spearated by tabs
 		const splits = l.split('\t')
+
+		let fileName = splits[2];
+
+		//TODO: handle renames properly
+		//-> update map property
+		if (fileName.contains(" => ")) {
+			//TODO: need to handle rename, which is in {  old => new } 
+			//-> and then apply this
+			const oldName = fileName.split(" => ")[0];
+			fileName = fileName.split(" => ")[1];
+		}
+
 		return {
-			name: splits[2],
+			name: fileName,
 			date: date,
 			linesAdded: Number(splits[0]),
 			linesRemoved: Number(splits[1])

@@ -52,33 +52,33 @@ export default class MyPlugin extends Plugin {
 				const content = await this.app.vault.cachedRead(file);
 				const gitFileMap = parser.parseGithistoryIndex(content);
 
-				console.log(gitFileMap);
-
-				// hackerman, hocking the metadata onto the index
-				const dataview = this.app.plugins.plugins.dataview.api;
-				console.log(dataview);
-				// NOTE: this works, but it doesn't propagate the metadata to the file attributes
-				const dvMetadataStorage: Map<string, PageMetadata> = dataview.index.pages;
-				console.log(dvMetadataStorage);
-
-				const pages = dataview.pages;
-				console.log(pages);
-
-				dvMetadataStorage.forEach((v, k) => addToFileMedata(k, v, gitFileMap));
+				const files = this.app.vault.getMarkdownFiles();
+				files.forEach(f => overrideCtimeMtime(f, gitFileMap, this.app.metadataCache));
 			}
 		});
 
-		function addToFileMedata(name: string, dvMetadata: PageMetadata, metadata: Map<string, GitFile>) {
+		//NOTE: it seems this worked -> dunno if the change request is required thou
+		//- dv index dropping is necessary after updates
+		function overrideCtimeMtime(file: TFile, metadata: Map<string, GitFile>, mCache: MetadataCache) {
 
-			if (!metadata.has(name)) {
-				//console.log("No metadata found for file: ", file.name)
+			if (!metadata.has(file.path)) {
+				console.log("No metadata found for file ", file.path);
 				return;
 			}
-			const gitMetadata = metadata.get(name);
-			//console.log("Found metadata for ", name);
+			const gitMeta = metadata.get(file.path);
 
-			if (!dvMetadata.git) dvMetadata.git = {}
-			Object.assign(dvMetadata.git, gitMetadata);
+			const cache = mCache.getFileCache(file);
+			if (!cache?.frontmatter) cache.frontmatter = {};
+
+			if (file.stat) {
+				file.stat.ctime = gitMeta.ctime.getTime();
+				file.stat.mtime = gitMeta.mtime.getTime();
+			}
+
+			cache.frontmatter.git = {};
+			Object.assign(cache.frontmatter.git, gitMeta);
+			mCache.trigger('changed', file, [], cache);
+
 		}
 
 		// This adds a settings tab so the user can configure various aspects of the plugin
