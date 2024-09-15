@@ -53,35 +53,32 @@ export default class MyPlugin extends Plugin {
 				const gitFileMap = parser.parseGithistoryIndex(content);
 
 				console.log(gitFileMap);
-				const allFiles = this.app.vault.getMarkdownFiles();
-				const fileCache = this.app.metadataCache;
 
-
+				// hackerman, hocking the metadata onto the index
 				const dataview = this.app.plugins.plugins.dataview.api;
-				const allpages = dataview.pages();
+				console.log(dataview);
+				// NOTE: this works, but it doesn't propagate the metadata to the file attributes
+				const dvMetadataStorage: Map<string, PageMetadata> = dataview.index.pages;
+				console.log(dvMetadataStorage);
 
-				allpages.forEach(f => addToFileMedata(f, fileCache, gitFileMap));
+				const pages = dataview.pages;
+				console.log(pages);
+
+				dvMetadataStorage.forEach((v, k) => addToFileMedata(k, v, gitFileMap));
 			}
 		});
 
-		function addToFileMedata(dvPage: any, metadataCache: MetadataCache, metadata: Map<string, GitFile>) {
+		function addToFileMedata(name: string, dvMetadata: PageMetadata, metadata: Map<string, GitFile>) {
 
-			const file = dvPage.file;
-
-			if (!metadata.has(file.name)) {
+			if (!metadata.has(name)) {
 				//console.log("No metadata found for file: ", file.name)
 				return;
 			}
+			const gitMetadata = metadata.get(name);
+			//console.log("Found metadata for ", name);
 
-			console.log("Found metadata for", file.name);
-			console.log(file);
-			const cache = metadataCache.getFileCache(file)
-			console.log(cache)
-			const gitMetadata = metadata.get(file.name);
-
-			if (!file.git) file.git = {}
-
-			Object.assign(file.git, gitMetadata);
+			if (!dvMetadata.git) dvMetadata.git = {}
+			Object.assign(dvMetadata.git, gitMetadata);
 		}
 
 		// This adds a settings tab so the user can configure various aspects of the plugin
